@@ -285,13 +285,17 @@ namespace Av.Format
         [CCode (cname = "av_dump_format")]
         public void dump_format (int index, string url, bool is_input);
         [CCode (cname = "av_read_frame")]
-        public int read_frame (ref Codec.Packet? packet);
+        public int read_frame (ref unowned Codec.Packet? packet);
         [CCode (cname = "av_seek_frame")]
         public int seek_frame(int stream_index, int64 timestamp, SeekFlag flags);
         [CCode (cname = "avformat_new_stream")]
         public unowned Stream? new_stream (Codec.Codec? codec);
         [CCode (cname = "avformat_write_header")]
         public int write_header (out Util.Dictionary? options);
+        [CCode (cname="av_interleaved_write_frame")]
+        public int interleaved_write_frame (ref unowned Codec.Packet? packet);
+        [CCode (cname="av_write_trailer")]
+        public int write_trailer ();
     }
 }
 

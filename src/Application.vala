@@ -55,7 +55,7 @@ int main (string[] args) {
             return 1;
         }
 
-        ret = out_stream.codecpar.copy_from (input_stream.codecpar);
+        ret = out_stream.codecpar.copy_from (input_codec_parameters);
         if (ret < 0) {
             stderr.printf ("Failed to copy codec parameters\n");
             Av.Format.Context.close_input (ref input_context);
@@ -82,25 +82,44 @@ int main (string[] args) {
     if (ret < 0) {
         stderr.printf ("Error occured while opening output file\n");
         Av.Format.Context.close_input (ref input_context);
-        if (output_context != null && !(Av.Format.Flag.NOFILE in output_format.flags)) {
+        if (output_context != null && output_format != null && !(Av.Format.Flag.NOFILE in output_format.flags)) {
             Av.Format.AVIOContext.closep (ref output_context.pb);
         }
 
         return 1;
     }
 
+    unowned Av.Codec.Packet? packet = null;
     while (true) {
-        message ("iter");
-        Av.Codec.Packet? packet = null;
         unowned Av.Format.Stream in_stream, out_stream;
         ret = input_context.read_frame (ref packet);
         if (ret < 0) {
             break;
         }
+
+        in_stream = input_context.streams[packet.stream_index];
+        if (packet.stream_index >= stream_mappings.length || stream_mappings[packet.stream_index] < 0) {
+            Av.Codec.Packet.unref (ref packet);
+            continue;
+        }
+
+        packet.stream_index = stream_mappings[packet.stream_index];
+        out_stream = output_context.streams[packet.stream_index];
+
+        packet.pts = Av.Util.Mathematics.rescale_q_rnd (packet.pts, in_stream.time_base, out_stream.time_base, Av.Util.Mathematics.NEAR_INF | Av.Util.Mathematics.PASS_MINMAX);
+        packet.dts = Av.Util.Mathematics.rescale_q_rnd (packet.dts, in_stream.time_base, out_stream.time_base, Av.Util.Mathematics.NEAR_INF | Av.Util.Mathematics.PASS_MINMAX);
+        packet.duration = Av.Util.Mathematics.rescale_q (packet.pts, in_stream.time_base, out_stream.time_base);
+        packet.pos = -1;
+
+        ret = output_context.interleaved_write_frame (ref packet);
+
+        Av.Codec.Packet.unref (ref packet);
     }
 
+    output_context.write_trailer ();
+
     Av.Format.Context.close_input (ref input_context);
-    if (output_context != null && !(Av.Format.Flag.NOFILE in output_format.flags)) {
+    if (output_context != null && output_format != null && !(Av.Format.Flag.NOFILE in output_format.flags)) {
         Av.Format.AVIOContext.closep (ref output_context.pb);
     }
 

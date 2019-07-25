@@ -483,7 +483,7 @@ namespace Av.Codec
         public PacketSideDataType type;
     }
 
-    [Compact, CCode (cname = "AVPacket", free_function = "av_packet_free", ref_function = "av_packet_ref", unref_function = "av_packet_unref", cheader_filename = "libavcodec/avcodec.h")]
+    [Compact, CCode (cname = "AVPacket", free_function = "av_packet_free", free_function_address_of = true, cheader_filename = "libavcodec/avcodec.h")]
     public class Packet
     {
         public int64   pts;
@@ -500,6 +500,9 @@ namespace Av.Codec
 
         [CCode (cname = "av_init_packet")]
         public void init ();
+
+        [CCode (cname = "av_packet_unref")]
+        public static void unref (ref unowned Packet packet);
     }
 
     [CCode (cname = "int", cprefix = "FF_PROFILE_", cheader_filename = "libavcodec/avcodec.h")]
